@@ -55,6 +55,12 @@ export interface ViralMoment {
   type: "emotional" | "funny" | "exciting" | "surprising" | "educational";
 }
 
+export interface TranscriptSegment {
+  start: number;
+  end: number;
+  text: string;
+}
+
 export interface ProcessingProgress {
   stage: "downloading" | "analyzing" | "processing" | "transcribing" | "rendering";
   progress: number;
