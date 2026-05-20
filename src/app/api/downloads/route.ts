@@ -1,45 +1,69 @@
 import { NextRequest, NextResponse } from "next/server";
+import { exec } from "child_process";
+import { promisify } from "util";
 import path from "path";
 import fs from "fs";
 import os from "os";
 
-const CLIPS_DIR = path.join(os.tmpdir(), "clipwave", "clips");
-const DOWNLOADS_DIR = path.join(os.tmpdir(), "clipwave", "downloads");
+const execAsync = promisify(exec);
+
+function getFfmpegPath(): string {
+  try {
+    return require("@ffmpeg-installer/ffmpeg").path;
+  } catch {
+    return "ffmpeg";
+  }
+}
 
 export async function GET(req: NextRequest) {
-  const file = req.nextUrl.searchParams.get("file");
-  if (!file) {
-    return NextResponse.json({ error: "Arquivo não especificado" }, { status: 400 });
+  const videoId = req.nextUrl.searchParams.get("videoId");
+  const start = req.nextUrl.searchParams.get("start");
+  const end = req.nextUrl.searchParams.get("end");
+
+  if (!videoId || !start || !end) {
+    return NextResponse.json({ error: "Parâmetros obrigatórios: videoId, start, end" }, { status: 400 });
   }
 
-  const safeName = path.basename(file);
-  const paths = [
-    path.join(CLIPS_DIR, safeName),
-    path.join(DOWNLOADS_DIR, safeName),
-  ];
+  const tmpDir = path.join(os.tmpdir(), "clipwave-dl");
+  await fs.promises.mkdir(tmpDir, { recursive: true });
+  const inputPath = path.join(tmpDir, `${videoId}.mp4`);
+  const outputPath = path.join(tmpDir, `clip_${videoId}_${start}_${end}.mp4`);
 
-  for (const filePath of paths) {
-    if (fs.existsSync(filePath)) {
-      const ext = path.extname(filePath).toLowerCase();
-      const mimeMap: Record<string, string> = {
-        ".mp4": "video/mp4",
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".png": "image/png",
-        ".srt": "text/plain",
-        ".json": "application/json",
-      };
-
-      const buffer = fs.readFileSync(filePath);
-      return new NextResponse(buffer, {
-        headers: {
-          "Content-Type": mimeMap[ext] || "application/octet-stream",
-          "Content-Disposition": `attachment; filename="${safeName}"`,
-          "Content-Length": buffer.length.toString(),
-        },
+  try {
+    if (!fs.existsSync(inputPath)) {
+      const { default: ytdl } = await import("@distube/ytdl-core");
+      await new Promise<void>((resolve, reject) => {
+        const stream = ytdl(`https://www.youtube.com/watch?v=${videoId}`, {
+          filter: "audioandvideo",
+          quality: "lowest",
+        });
+        const writeStream = fs.createWriteStream(inputPath);
+        stream.pipe(writeStream);
+        writeStream.on("finish", resolve);
+        writeStream.on("error", reject);
+        stream.on("error", reject);
       });
     }
-  }
 
-  return NextResponse.json({ error: "Arquivo não encontrado" }, { status: 404 });
+    const ffmpeg = getFfmpegPath();
+    const duration = Math.round(Number(end) - Number(start));
+    await execAsync(
+      `"${ffmpeg}" -ss ${start} -i "${inputPath}" -t ${Math.min(duration, 60)} -c:v libx264 -preset ultrafast -crf 28 -c:a aac -b:a 64k -y "${outputPath}"`,
+      { timeout: 60000 }
+    );
+
+    const buffer = fs.readFileSync(outputPath);
+    return new NextResponse(buffer, {
+      headers: {
+        "Content-Type": "video/mp4",
+        "Content-Disposition": `attachment; filename="clip_${videoId}_${start}s.mp4"`,
+        "Content-Length": buffer.length.toString(),
+      },
+    });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  } finally {
+    try { fs.unlinkSync(outputPath); } catch {}
+    try { fs.unlinkSync(inputPath); } catch {}
+  }
 }

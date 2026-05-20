@@ -37,15 +37,9 @@ export default function DashboardPage() {
     setActiveTab("clips");
   }, []);
 
-  const handleExport = async (clipId: string, platform: string) => {
-    try {
-      const res = await fetch("/api/clips", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clipId, platform }),
-      });
-      const data = await res.json();
-      if (data.downloadUrl) window.open(data.downloadUrl, "_blank");
-    } catch {}
+  const handleExport = (clip: Clip, _platform: string) => {
+    const url = `/api/downloads?videoId=${clip.videoId}&start=${Math.round(clip.startTime)}&end=${Math.round(clip.endTime)}`;
+    window.open(url, "_blank");
   };
 
   return (
@@ -162,13 +156,13 @@ export default function DashboardPage() {
                       <p className="text-xs text-white/40 mb-3 line-clamp-1">{clip.description}</p>
                       <div className="flex items-center gap-2">
                         {clip.exportFormats.map((fmt) => (
-                          <button key={fmt.platform} onClick={() => handleExport(clip.id, fmt.platform)}
+                          <button key={fmt.platform} onClick={() => handleExport(clip, fmt.platform)}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass glass-hover text-xs text-white/60">
                             {fmt.platform === "tiktok" ? "TikTok" : fmt.platform === "reels" ? "Reels" : "Shorts"}
                             <Download className="w-3 h-3" />
                           </button>
                         ))}
-                        <button onClick={() => handleExport(clip.id, "mp4")}
+                        <button onClick={() => handleExport(clip, "mp4")}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass glass-hover text-xs text-white/60 ml-auto">
                           <Download className="w-3 h-3" /> MP4
                         </button>

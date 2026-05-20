@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { getVideoInfo } from "@/lib/yt-dlp";
 import { transcribeAudio, generateCaptionsWithEmojis } from "@/lib/whisper";
 import {
@@ -11,7 +12,7 @@ import {
 import type { ProcessingJob, Clip } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
@@ -35,10 +36,8 @@ export async function POST(req: NextRequest) {
     }
 
     const videoInfo = await getVideoInfo(url);
-
     const rawTranscript = await transcribeAudio("", "pt");
     const captions = generateCaptionsWithEmojis(rawTranscript);
-
     const moments = detectViralMoments(rawTranscript, videoInfo.duration);
 
     const clips: Clip[] = [];
@@ -47,7 +46,6 @@ export async function POST(req: NextRequest) {
       const moment = moments[i];
       const segStart = moment.start;
       const segEnd = Math.min(moment.end, segStart + 45);
-      const clipDuration = segEnd - segStart;
 
       const segCaptions = captions
         .filter((c) => c.start >= segStart && c.end <= segEnd)
@@ -66,7 +64,7 @@ export async function POST(req: NextRequest) {
         videoId: videoInfo.videoId,
         startTime: segStart,
         endTime: segEnd,
-        duration: clipDuration,
+        duration: segEnd - segStart,
         title: titles[i % titles.length],
         viralScore: moment.score,
         description: `Momento ${moment.type} detectado: ${moment.reason}`,
