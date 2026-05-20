@@ -159,11 +159,14 @@ export default function VideoProcessor({ onClipsComplete }: Props = {}) {
           {job.clips.map((clip, index) => (
             <motion.div key={clip.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}
               className={`glass rounded-2xl overflow-hidden border transition-all ${selectedClip?.id === clip.id ? "border-primary-500/50 neon-glow" : "border-white/10"}`}>
-              <div className="relative aspect-video bg-gradient-to-br from-gray-900 to-black flex items-center justify-center group cursor-pointer"
-                   onClick={() => setSelectedClip(selectedClip?.id === clip.id ? null : clip)}>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                <Play className="w-16 h-16 text-white/30 group-hover:text-white/60 group-hover:scale-110 transition-all z-10" />
-                <div className="absolute top-3 left-3 flex items-center gap-2">
+              <div className="relative aspect-video bg-black">
+                <iframe
+                  src={`https://www.youtube.com/embed/${clip.videoId}?start=${Math.round(clip.startTime)}&end=${Math.round(clip.endTime)}&autoplay=0&controls=1&rel=0`}
+                  className="absolute inset-0 w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+                <div className="absolute top-3 left-3 flex items-center gap-2 z-10">
                   <span className="glass px-2 py-1 rounded-full text-xs text-white/80 flex items-center gap-1">
                     <TrendingUp className="w-3 h-3 text-green-400" />{clip.viralScore}%
                   </span>

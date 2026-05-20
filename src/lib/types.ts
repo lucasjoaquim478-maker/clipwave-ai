@@ -21,6 +21,7 @@ export interface VideoInfo {
 
 export interface Clip {
   id: string;
+  videoId: string;
   startTime: number;
   endTime: number;
   duration: number;

@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
 
       clips.push({
         id: `clip_${i}`,
+        videoId: videoInfo.videoId,
         startTime: segStart,
         endTime: segEnd,
         duration: clipDuration,
