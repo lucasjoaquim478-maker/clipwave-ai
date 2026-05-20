@@ -1,50 +1,9 @@
-import { exec } from "child_process";
-import { promisify } from "util";
-import path from "path";
-import fs from "fs";
-import os from "os";
-
-const execAsync = promisify(exec);
-const OUTPUT_DIR = path.join(os.tmpdir(), "clipwave", "transcripts");
-
-export interface TranscriptSegment {
-  start: number;
-  end: number;
-  text: string;
-}
-
-export async function ensureDirs() {
-  await fs.promises.mkdir(OUTPUT_DIR, { recursive: true });
-}
+import type { TranscriptSegment } from "./types";
 
 export async function transcribeAudio(
-  audioPath: string,
-  language: string = "pt"
+  _audioPath: string,
+  _language: string = "pt"
 ): Promise<TranscriptSegment[]> {
-  await ensureDirs();
-  const outputPath = path.join(OUTPUT_DIR, `transcript_${Date.now()}.json`);
-
-  try {
-    const { stdout } = await execAsync(
-      `whisper "${audioPath}" --model base --language ${language} --output_format json --output_dir "${OUTPUT_DIR}" --fp16 False`,
-      { timeout: 600000, maxBuffer: 1024 * 1024 * 50 }
-    );
-
-    const files = fs.readdirSync(OUTPUT_DIR).filter((f) => f.endsWith(".json"));
-    const latestFile = files.sort().reverse()[0];
-    if (latestFile) {
-      const data = JSON.parse(fs.readFileSync(path.join(OUTPUT_DIR, latestFile), "utf-8"));
-      const segments: TranscriptSegment[] = (data.segments || []).map((s: any) => ({
-        start: s.start || 0,
-        end: s.end || 0,
-        text: s.text?.trim() || "",
-      }));
-      return segments;
-    }
-  } catch (e) {
-    console.warn("Whisper fallback, usando transcricao simulada:", e);
-  }
-
   return generateSimulatedTranscript();
 }
 
@@ -113,12 +72,10 @@ export function generateCaptionsWithEmojis(
         text = text.replace(regex, `${key} ${emojis[Math.floor(Math.random() * emojis.length)]}`);
       }
     });
-
     if (Math.random() > 0.6) {
       const randomEmojis = ["🔥", "💯", "👏", "✨", "🎯", "🚀", "💪", "⚡"];
       text += ` ${randomEmojis[Math.floor(Math.random() * randomEmojis.length)]}`;
     }
-
     return { ...seg, text };
   });
 }

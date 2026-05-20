@@ -16,22 +16,38 @@ export interface ClipConfig {
   startTime: number;
   endTime: number;
   outputName: string;
-  addCaptions?: boolean;
-  captionFile?: string;
   zoomTarget?: { x: number; y: number; scale: number };
 }
 
+function getFfmpegPath(): string {
+  try {
+    return require("@ffmpeg-installer/ffmpeg").path;
+  } catch {
+    return "ffmpeg";
+  }
+}
+
+function getFfprobePath(): string {
+  try {
+    return require("@ffmpeg-installer/ffmpeg").path.replace("ffmpeg", "ffprobe");
+  } catch {
+    return "ffprobe";
+  }
+}
+
 export async function getVideoDimensions(inputPath: string): Promise<{ width: number; height: number }> {
+  const ffprobe = getFfprobePath();
   const { stdout } = await execAsync(
-    `ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "${inputPath}"`,
-    { timeout: 10000 }
+    `"${ffprobe}" -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 "${inputPath}"`,
+    { timeout: 15000 }
   );
   const [width, height] = stdout.trim().split("x").map(Number);
-  return { width, height };
+  return { width: width || 1920, height: height || 1080 };
 }
 
 export async function createVerticalClip(config: ClipConfig): Promise<string> {
   await ensureDirs();
+  const ffmpeg = getFfmpegPath();
   const outputPath = path.join(OUTPUT_DIR, `${config.outputName}.mp4`);
   const duration = config.endTime - config.startTime;
 
@@ -39,73 +55,29 @@ export async function createVerticalClip(config: ClipConfig): Promise<string> {
   const targetWidth = 1080;
   const targetHeight = 1920;
   const cropSize = Math.min(dims.width, dims.height);
-  const cropX = config.zoomTarget
-    ? Math.max(0, Math.min(config.zoomTarget.x - cropSize / 2 / config.zoomTarget.scale, dims.width - cropSize / config.zoomTarget.scale))
-    : (dims.width - cropSize) / 2;
-  const cropY = config.zoomTarget
-    ? Math.max(0, Math.min(config.zoomTarget.y - cropSize / 2 / config.zoomTarget.scale, dims.height - cropSize / config.zoomTarget.scale))
-    : (dims.height - cropSize) / 2;
   const scale = config.zoomTarget?.scale || 1;
+  const cx = config.zoomTarget?.x ?? dims.width / 2;
+  const cy = config.zoomTarget?.y ?? dims.height / 2;
 
-  const filter = `[0:v]crop=${cropSize / scale}:${cropSize / scale}:${cropX}:${cropY},scale=${targetWidth}:${targetHeight}:force_original_aspect_ratio=increase,crop=${targetWidth}:${targetHeight}[v]`;
+  const cropW = cropSize / scale;
+  const cropH = cropSize / scale;
+  const cropX = Math.max(0, Math.min(cx - cropW / 2, dims.width - cropW));
+  const cropY = Math.max(0, Math.min(cy - cropH / 2, dims.height - cropH));
 
-  const cmd = [
-    `ffmpeg -ss ${config.startTime} -i "${config.inputPath}"`,
-    `-t ${duration}`,
-    `-filter_complex "${filter}"`,
-    `-map "[v]" -map 0:a?`,
-    `-c:v libx264 -preset fast -crf 22`,
-    `-c:a aac -b:a 128k`,
-    `-y "${outputPath}"`,
-  ].join(" ");
+  const filter = `crop=${cropW}:${cropH}:${cropX}:${cropY},scale=${targetWidth}:${targetHeight}:force_original_aspect_ratio=decrease,pad=${targetWidth}:${targetHeight}:(ow-iw)/2:(oh-ih)/2`;
 
-  await execAsync(cmd, { timeout: 120000, maxBuffer: 1024 * 1024 * 100 });
-  return outputPath;
-}
-
-export async function addCaptionsToClip(
-  videoPath: string,
-  captions: { start: number; end: number; text: string }[],
-  outputName: string
-): Promise<string> {
-  await ensureDirs();
-  const outputPath = path.join(OUTPUT_DIR, `${outputName}_captioned.mp4`);
-  const srtPath = path.join(OUTPUT_DIR, `${outputName}.srt`);
-
-  const srtContent = captions
-    .map((c, i) => {
-      const fmt = (s: number) => {
-        const h = Math.floor(s / 3600);
-        const m = Math.floor((s % 3600) / 60);
-        const sec = s % 60;
-        return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${sec.toFixed(3).replace(".", ",")}`;
-      };
-      return `${i + 1}\n${fmt(c.start)} --> ${fmt(c.end)}\n${c.text}\n`;
-    })
-    .join("\n");
-
-  fs.writeFileSync(srtPath, srtContent, "utf-8");
-
-  const cmd = [
-    `ffmpeg -i "${videoPath}"`,
-    `-vf "subtitles='${srtPath}':fontsdir=/usr/share/fonts:force_style='FontName=Inter,FontSize=18,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=3,Outline=1,Shadow=0,Alignment=2,MarginV=40'"`,
-    `-c:a copy`,
-    `-y "${outputPath}"`,
-  ].join(" ");
+  const cmd = `"${ffmpeg}" -ss ${config.startTime} -i "${config.inputPath}" -t ${Math.min(duration, 60)} -vf "${filter}" -c:v libx264 -preset ultrafast -crf 28 -c:a aac -b:a 64k -y "${outputPath}"`;
 
   await execAsync(cmd, { timeout: 60000 });
   return outputPath;
 }
 
-export async function extractThumbnail(
-  videoPath: string,
-  timeSeconds: number,
-  outputName: string
-): Promise<string> {
+export async function extractThumbnail(videoPath: string, timeSeconds: number, outputName: string): Promise<string> {
   await ensureDirs();
+  const ffmpeg = getFfmpegPath();
   const outputPath = path.join(OUTPUT_DIR, `${outputName}_thumb.jpg`);
   await execAsync(
-    `ffmpeg -ss ${timeSeconds} -i "${videoPath}" -vframes 1 -q:v 3 -y "${outputPath}"`,
+    `"${ffmpeg}" -ss ${timeSeconds} -i "${videoPath}" -vframes 1 -q:v 3 -y "${outputPath}"`,
     { timeout: 15000 }
   );
   return outputPath;

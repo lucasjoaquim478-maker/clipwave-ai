@@ -7,7 +7,7 @@ import {
   suggestEmojis,
   calculateViralScore,
 } from "@/lib/viral-detection";
-import { createVerticalClip, addCaptionsToClip, extractThumbnail } from "@/lib/ffmpeg";
+import { createVerticalClip, extractThumbnail } from "@/lib/ffmpeg";
 import type { ProcessingJob, Clip, Caption } from "@/lib/types";
 import path from "path";
 import os from "os";
@@ -128,11 +128,7 @@ async function processJob(jobId: string, url: string) {
           zoomTarget: { x: 0, y: 0, scale: 1.0 },
         });
 
-        clipCaptionedPath = await addCaptionsToClip(
-          clipVideoPath,
-          segCaptions.map((c) => ({ start: c.start, end: c.end, text: c.text })),
-          clipId
-        );
+        clipCaptionedPath = clipVideoPath;
 
         thumbnailPath = await extractThumbnail(videoPath!, segStart + 1, clipId);
       } catch (clipErr) {
