@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@auth/core": "^0.34.3",
-    "@distube/ytdl-core": "^4.16.12",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@types/react-google-recaptcha": "^2.1.9",
     "clsx": "^2.1.0",
