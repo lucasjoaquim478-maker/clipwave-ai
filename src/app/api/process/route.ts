@@ -44,8 +44,9 @@ export async function POST(req: NextRequest) {
 
     for (let i = 0; i < Math.min(moments.length, 5); i++) {
       const moment = moments[i];
-      const segStart = moment.start;
-      const segEnd = Math.min(moment.end, segStart + 45);
+      const clipDuration = Math.min(55, videoInfo.duration);
+      const segStart = Math.max(0, moment.start - 5);
+      const segEnd = Math.min(videoInfo.duration, segStart + clipDuration);
 
       const segCaptions = captions
         .filter((c) => c.start >= segStart && c.end <= segEnd)
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
         videoId: videoInfo.videoId,
         startTime: segStart,
         endTime: segEnd,
-        duration: segEnd - segStart,
+        duration: Math.round(segEnd - segStart),
         title: titles[i % titles.length],
         viralScore: moment.score,
         description: `Momento ${moment.type} detectado: ${moment.reason}`,
