@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Youtube, Sparkles, ArrowRight, Loader2, CheckCircle2, AlertCircle,
@@ -10,6 +10,17 @@ import {
 import YouTubePlayer from "@/components/YouTubePlayer";
 import type { ProcessingJob, Clip } from "@/lib/types";
 
+const STEPS = [
+  { label: "Analyzing video", progress: 5 },
+  { label: "Downloading video", progress: 15 },
+  { label: "Extracting audio", progress: 35 },
+  { label: "Transcribing with AI", progress: 50 },
+  { label: "Detecting viral moments", progress: 65 },
+  { label: "Creating vertical clips", progress: 75 },
+  { label: "Generating captions", progress: 90 },
+  { label: "Finalizing", progress: 100 },
+];
+
 interface Props {
   onClipsComplete?: (clips: Clip[]) => void;
 }
@@ -18,7 +29,22 @@ export default function VideoProcessor({ onClipsComplete }: Props = {}) {
   const [url, setUrl] = useState("");
   const [job, setJob] = useState<ProcessingJob | null>(null);
   const [polling, setPolling] = useState(false);
+  const [simProgress, setSimProgress] = useState(0);
   const [selectedClip, setSelectedClip] = useState<Clip | null>(null);
+  const progressRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!polling) { setSimProgress(0); progressRef.current = 0; return; }
+    progressRef.current = 0;
+    setSimProgress(0);
+    const interval = setInterval(() => {
+      const next = Math.min(progressRef.current + 1, 90);
+      progressRef.current = next;
+      setSimProgress(next);
+      if (next >= 90) clearInterval(interval);
+    }, 150);
+    return () => clearInterval(interval);
+  }, [polling]);
 
   const handleSubmit = useCallback(async () => {
     if (!url.trim()) return;
@@ -38,11 +64,14 @@ export default function VideoProcessor({ onClipsComplete }: Props = {}) {
         setPolling(false);
         return;
       }
-      setJob(data.job);
-      setPolling(false);
-      if (data.job?.status === "complete" && data.job?.clips && onClipsComplete) {
-        onClipsComplete(data.job.clips);
-      }
+      setSimProgress(100);
+      setTimeout(() => {
+        setJob(data.job);
+        setPolling(false);
+        if (data.job?.status === "complete" && data.job?.clips && onClipsComplete) {
+          onClipsComplete(data.job.clips);
+        }
+      }, 400);
     } catch {
       setPolling(false);
     }
@@ -162,43 +191,44 @@ export default function VideoProcessor({ onClipsComplete }: Props = {}) {
   }
 
   if (polling || (job && ["queued", "downloading", "analyzing", "processing", "transcribing", "rendering"].includes(job.status))) {
+    const progress = simProgress;
     return (
       <div className="card-premium p-8">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#6366f1] to-[#7c3aed] p-4 animate-pulse">
+          <motion.div
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#6366f1] to-[#7c3aed] p-4"
+          >
             <Loader2 className="w-full h-full text-white animate-spin" />
-          </div>
+          </motion.div>
           <h3 className="text-lg font-display font-semibold mb-2">AI Processing Your Video...</h3>
           <p className="text-sm text-white/40">{job?.videoInfo?.title || "Analyzing content..."}</p>
         </div>
 
         <div className="max-w-xl mx-auto mb-8">
-          <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+          <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
-              animate={{ width: `${job?.progress || 0}%` }}
-              transition={{ duration: 0.5 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
               className="h-full rounded-full bg-gradient-to-r from-[#6366f1] via-[#7c3aed] to-[#00d4ff]"
             />
           </div>
-          <p className="text-right text-[10px] text-white/20 mt-1">{job?.progress || 0}%</p>
+          <p className="text-right text-[10px] text-white/20 mt-1">{progress}%</p>
         </div>
 
         <div className="max-w-md mx-auto space-y-2">
-          {[
-            { label: "Analyzing video", progress: 5 },
-            { label: "Downloading video", progress: 15 },
-            { label: "Extracting audio", progress: 35 },
-            { label: "Transcribing with AI", progress: 50 },
-            { label: "Detecting viral moments", progress: 65 },
-            { label: "Creating vertical clips", progress: 75 },
-            { label: "Generating captions", progress: 90 },
-            { label: "Finalizing", progress: 100 },
-          ].map((step, i) => {
-            const progress = job?.progress || 0;
-            const status = progress >= step.progress ? "done" : progress >= step.progress - 10 ? "active" : "pending";
+          {STEPS.map((step, i) => {
+            const status = progress >= step.progress ? "done" : progress >= step.progress - 8 ? "active" : "pending";
             return (
-              <div key={i} className="flex items-center gap-3 text-sm">
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="flex items-center gap-3 text-sm"
+              >
                 {status === "done" ? (
                   <CheckCircle2 className="w-4 h-4 text-[#10b981] flex-shrink-0" />
                 ) : status === "active" ? (
@@ -207,11 +237,11 @@ export default function VideoProcessor({ onClipsComplete }: Props = {}) {
                   <div className="w-4 h-4 rounded-full border border-white/[0.06] flex-shrink-0" />
                 )}
                 <span className={`${
-                  status === "done" ? "text-white/40" : status === "active" ? "text-white/70" : "text-white/20"
+                  status === "done" ? "text-white/40" : status === "active" ? "text-white/80" : "text-white/20"
                 }`}>
                   {step.label}
                 </span>
-              </div>
+              </motion.div>
             );
           })}
         </div>
