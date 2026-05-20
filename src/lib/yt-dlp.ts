@@ -35,6 +35,7 @@ export async function getVideoInfo(url: string): Promise<YouTubeInfo> {
   );
   const data = await res.json();
 
+  if (data.error) throw new Error(`YouTube API: ${data.error.message}`);
   if (!data.items?.[0]) throw new Error("Vídeo não encontrado");
 
   const item = data.items[0];

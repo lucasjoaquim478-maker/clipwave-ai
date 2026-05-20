@@ -35,7 +35,11 @@ interface ProgressStep {
   progress: number;
 }
 
-export default function VideoProcessor() {
+interface Props {
+  onClipsComplete?: (clips: Clip[]) => void;
+}
+
+export default function VideoProcessor({ onClipsComplete }: Props = {}) {
   const [url, setUrl] = useState("");
   const [jobId, setJobId] = useState<string | null>(null);
   const [job, setJob] = useState<ProcessingJob | null>(null);
@@ -94,6 +98,9 @@ export default function VideoProcessor() {
       }
       setJob(data.job);
       setPolling(false);
+      if (data.job?.status === "complete" && data.job?.clips && onClipsComplete) {
+        onClipsComplete(data.job.clips);
+      }
     } catch (err) {
       console.error("Erro ao iniciar processamento:", err);
       setPolling(false);
