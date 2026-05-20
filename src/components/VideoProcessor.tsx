@@ -76,6 +76,7 @@ export default function VideoProcessor() {
     setJob(null);
     setSelectedClip(null);
     setEditingCaptions(false);
+    setPolling(true);
 
     try {
       const res = await fetch("/api/process", {
@@ -88,36 +89,16 @@ export default function VideoProcessor() {
         alert(data.error);
         if (recaptchaRef.current) recaptchaRef.current.reset();
         setRecaptchaToken(null);
+        setPolling(false);
         return;
       }
-      if (data.jobId) {
-        setJobId(data.jobId);
-        setPolling(true);
-      }
+      setJob(data.job);
+      setPolling(false);
     } catch (err) {
       console.error("Erro ao iniciar processamento:", err);
+      setPolling(false);
     }
   }, [url, recaptchaToken]);
-
-  useEffect(() => {
-    if (!polling || !jobId) return;
-    pollRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/process?jobId=${jobId}`);
-        const data: ProcessingJob = await res.json();
-        setJob(data);
-        if (data.status === "complete" || data.status === "error") {
-          setPolling(false);
-          if (pollRef.current) clearInterval(pollRef.current);
-        }
-      } catch (err) {
-        console.error("Polling error:", err);
-      }
-    }, 1500);
-    return () => {
-      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-    };
-  }, [polling, jobId]);
 
   useEffect(() => {
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
@@ -219,7 +200,7 @@ export default function VideoProcessor() {
     );
   }
 
-  if (job && (job.status === "queued" || job.status === "downloading" || job.status === "analyzing" || job.status === "processing" || job.status === "transcribing" || job.status === "rendering")) {
+  if (polling || (job && (job.status === "queued" || job.status === "downloading" || job.status === "analyzing" || job.status === "processing" || job.status === "transcribing" || job.status === "rendering"))) {
     return (
       <div className="glass rounded-2xl p-8 border border-white/10">
         <div className="text-center mb-8">
@@ -227,14 +208,14 @@ export default function VideoProcessor() {
             <Loader2 className="w-full h-full text-white animate-spin" />
           </div>
           <h3 className="text-xl font-display font-semibold mb-2">IA processando seu vídeo...</h3>
-          <p className="text-sm text-white/50">{job.videoInfo?.title || "Analisando conteúdo..."}</p>
+           <p className="text-sm text-white/50">{job?.videoInfo?.title || "Analisando conteúdo..."}</p>
         </div>
         <div className="max-w-xl mx-auto mb-8">
           <div className="h-3 rounded-full bg-white/5 overflow-hidden">
-            <motion.div initial={{ width: 0 }} animate={{ width: `${job.progress}%` }} transition={{ duration: 0.5 }}
+            <motion.div initial={{ width: 0 }} animate={{ width: `${job?.progress || 0}%` }} transition={{ duration: 0.5 }}
               className="h-full rounded-full bg-gradient-to-r from-neon-blue via-primary-500 to-neon-purple" />
           </div>
-          <p className="text-right text-xs text-white/30 mt-1">{job.progress}%</p>
+          <p className="text-right text-xs text-white/30 mt-1">{job?.progress || 0}%</p>
         </div>
         <div className="max-w-md mx-auto space-y-3">
           {currentSteps.map((step, i) => (
