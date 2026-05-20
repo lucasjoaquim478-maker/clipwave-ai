@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 
 export default function PricingPage() {
   return (
-    <main className="min-h-screen bg-black">
+    <main className="min-h-screen bg-[#07070d]">
       <Navbar />
       <div className="pt-24">
         <Pricing />

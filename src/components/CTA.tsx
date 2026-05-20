@@ -1,40 +1,59 @@
 "use client";
 
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles, Zap } from "lucide-react";
 import Link from "next/link";
-import AnimatedSection from "./AnimatedSection";
+import { motion } from "framer-motion";
 
 export default function CTA() {
   return (
     <section className="relative py-24 lg:py-32 overflow-hidden">
-      <div className="absolute inset-0 animated-gradient opacity-5" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-500/10 rounded-full blur-[100px]" />
+      <div className="absolute inset-0 animated-gradient-slow" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#6366f1]/10 rounded-full blur-[100px]" />
 
       <div className="relative z-10 max-w-3xl mx-auto px-4 text-center">
-        <AnimatedSection>
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass text-sm text-white/60 mb-8 border border-white/10">
-            <Sparkles className="w-4 h-4 text-neon-blue" />
-            <span>Vagas limitadas</span>
-          </div>
-          <h2 className="text-4xl md:text-5xl font-display font-bold mb-6">
-            Pronto para{" "}
-            <span className="gradient-text">viralizar?</span>
-          </h2>
-          <p className="text-lg text-white/50 mb-10 max-w-xl mx-auto">
-            Junte-se a mais de 10 mil criadores que já estão usando ClipWave AI
-            para transformar suas lives em cortes virais.
-          </p>
-          <Link
-            href="/dashboard"
-            className="btn-primary text-lg !px-10 !py-4 group inline-flex items-center gap-2"
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7 }}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium tracking-wider uppercase bg-white/[0.06] text-white/60 border border-white/[0.08] mb-8"
           >
-            Criar Conta Gratuita
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </Link>
-          <p className="text-xs text-white/30 mt-4">
-            • Sem cartão de crédito • 3 cortes grátis • Cancele quando quiser
+            <Sparkles className="w-3.5 h-3.5 text-[#00d4ff]" />
+            <span>Limited Beta Spots</span>
+          </motion.div>
+
+          <h2 className="text-4xl sm:text-5xl md:text-6xl font-display font-bold tracking-tight mb-6">
+            Ready to{" "}
+            <span className="gradient-text">Go Viral?</span>
+          </h2>
+
+          <p className="text-base sm:text-lg text-white/40 mb-10 max-w-xl mx-auto leading-relaxed">
+            Join 10,000+ creators already using ClipWave AI to transform their streams into viral clips.
           </p>
-        </AnimatedSection>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href="/dashboard"
+              className="btn-primary text-base sm:text-lg !px-10 !py-4 group"
+            >
+              <Zap className="w-5 h-5" />
+              <span>Create Free Account</span>
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <Link href="/pricing" className="btn-secondary text-base sm:text-lg !px-8 !py-4">
+              View Plans
+            </Link>
+          </div>
+
+          <p className="text-xs text-white/20 mt-6">
+            • No credit card required • 3 free clips • Cancel anytime
+          </p>
+        </motion.div>
       </div>
     </section>
   );
