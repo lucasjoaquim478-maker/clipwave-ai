@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Youtube, Sparkles, ArrowRight, Loader2, CheckCircle2, AlertCircle,
-  BarChart3, Clock, Film, Music, Captions, Scissors, Wand2, Download,
-  Play, TrendingUp, Zap, Link, ShieldCheck, Search, Hash,
+  BarChart3, Clock, Film, Music, Scissors, Wand2, Download,
+  TrendingUp, Zap,
 } from "lucide-react";
-import ReCAPTCHA from "react-google-recaptcha";
 import YouTubePlayer from "@/components/YouTubePlayer";
 import type { ProcessingJob, Clip } from "@/lib/types";
 
@@ -20,15 +19,9 @@ export default function VideoProcessor({ onClipsComplete }: Props = {}) {
   const [job, setJob] = useState<ProcessingJob | null>(null);
   const [polling, setPolling] = useState(false);
   const [selectedClip, setSelectedClip] = useState<Clip | null>(null);
-  const recaptchaRef = useRef<ReCAPTCHA>(null);
-  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
-
-  const handleRecaptchaChange = (token: string | null) => {
-    setRecaptchaToken(token);
-  };
 
   const handleSubmit = useCallback(async () => {
-    if (!url.trim() || !recaptchaToken) return;
+    if (!url.trim()) return;
     setJob(null);
     setSelectedClip(null);
     setPolling(true);
@@ -37,13 +30,11 @@ export default function VideoProcessor({ onClipsComplete }: Props = {}) {
       const res = await fetch("/api/process", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: url.trim(), recaptchaToken }),
+        body: JSON.stringify({ url: url.trim() }),
       });
       const data = await res.json();
       if (data.error) {
         alert(data.error);
-        if (recaptchaRef.current) recaptchaRef.current.reset();
-        setRecaptchaToken(null);
         setPolling(false);
         return;
       }
@@ -55,7 +46,7 @@ export default function VideoProcessor({ onClipsComplete }: Props = {}) {
     } catch {
       setPolling(false);
     }
-  }, [url, recaptchaToken, onClipsComplete]);
+  }, [url, onClipsComplete]);
 
   const handleExport = async (clip: Clip, _platform: string) => {
     const dlUrl = `/api/downloads?videoId=${clip.videoId}&start=${Math.round(clip.startTime)}&end=${Math.round(clip.endTime)}`;
@@ -254,7 +245,12 @@ export default function VideoProcessor({ onClipsComplete }: Props = {}) {
       <div className="max-w-xl mx-auto">
         <div className="flex gap-3">
           <div className="flex-1 relative">
-            <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-full h-full">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+              </svg>
+            </div>
             <input
               type="url"
               value={url}
@@ -266,26 +262,12 @@ export default function VideoProcessor({ onClipsComplete }: Props = {}) {
           </div>
           <button
             onClick={handleSubmit}
-            disabled={!url.trim() || !recaptchaToken}
+            disabled={!url.trim()}
             className="btn-primary !px-6 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Process
             <ArrowRight className="ml-2 w-4 h-4" />
           </button>
-        </div>
-
-        <div className="flex justify-center mt-4">
-          <ReCAPTCHA
-            ref={recaptchaRef}
-            sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ""}
-            onChange={handleRecaptchaChange}
-            theme="dark"
-          />
-        </div>
-
-        <div className="mt-4 flex items-center justify-center gap-2 text-xs text-white/20">
-          <ShieldCheck className="w-3 h-3 text-[#10b981]" />
-          Anti-bot verification active
         </div>
 
         <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-[10px] text-white/20 tracking-wider uppercase">
