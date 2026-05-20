@@ -16,6 +16,7 @@ export interface VideoInfo {
   channel: string;
   format: string;
   resolution: string;
+  likes?: number;
 }
 
 export interface Clip {
