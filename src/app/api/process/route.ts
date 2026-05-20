@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
 import { getVideoInfo } from "@/lib/yt-dlp";
 import { transcribeAudio, generateCaptionsWithEmojis } from "@/lib/whisper";
 import {
@@ -10,6 +11,11 @@ import {
 import type { ProcessingJob, Clip } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
+  const session = await getServerSession();
+  if (!session) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+
   try {
     const { url, recaptchaToken } = await req.json();
     if (!url || !url.includes("youtube.com") && !url.includes("youtu.be")) {
