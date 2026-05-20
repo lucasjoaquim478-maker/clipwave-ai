@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import VideoProcessor from "@/components/VideoProcessor";
+import YouTubePlayer from "@/components/YouTubePlayer";
 import type { Clip } from "@/lib/types";
 
 const stats = [
@@ -145,12 +146,7 @@ export default function DashboardPage() {
                   <motion.div key={clip.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}
                     className="glass rounded-2xl overflow-hidden border border-white/10">
                     <div className="relative aspect-video bg-black">
-                      <iframe
-                        src={`https://www.youtube.com/embed/${clip.videoId}?start=${Math.round(clip.startTime)}&end=${Math.round(clip.endTime)}&autoplay=0&controls=1&rel=0`}
-                        className="absolute inset-0 w-full h-full"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
+                      <YouTubePlayer videoId={clip.videoId} start={clip.startTime} end={clip.endTime} />
                       <div className="absolute top-3 left-3 flex items-center gap-2 z-10">
                         <span className="glass px-2 py-1 rounded-full text-xs text-white/80 flex items-center gap-1">
                           <TrendingUp className="w-3 h-3 text-green-400" />{clip.viralScore}%
