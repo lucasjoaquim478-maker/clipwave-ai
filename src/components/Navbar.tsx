@@ -52,7 +52,7 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
-            <Link href="/login" className="btn-primary text-sm !px-5 !py-2.5">
+            <Link href="/dashboard" className="btn-primary text-sm !px-5 !py-2.5">
               Começar Grátis
             </Link>
           </div>
@@ -86,7 +86,7 @@ export default function Navbar() {
                 </Link>
               ))}
               <Link
-                href="/login"
+                href="/dashboard"
                 onClick={() => setMobileOpen(false)}
                 className="btn-primary text-sm !px-5 !py-2.5 w-full text-center block"
               >

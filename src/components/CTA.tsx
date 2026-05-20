@@ -25,7 +25,7 @@ export default function CTA() {
             para transformar suas lives em cortes virais.
           </p>
           <Link
-            href="/login"
+            href="/dashboard"
             className="btn-primary text-lg !px-10 !py-4 group inline-flex items-center gap-2"
           >
             Criar Conta Gratuita

@@ -53,7 +53,7 @@ export default function Hero() {
           className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
         >
           <Link
-            href="/login"
+            href="/dashboard"
             className="btn-primary text-lg !px-8 !py-4 group"
           >
             Começar Gratuitamente
